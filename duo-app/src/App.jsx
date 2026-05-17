@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AnimatePresence } from 'framer-motion';
 
 import AppShell from './components/layout/AppShell';
+import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
@@ -19,20 +19,45 @@ import Settings from './pages/Settings';
 import useAuthStore from './store/authStore';
 
 function ProtectedRoute({ children }) {
-  const { isOnboarded } = useAuthStore();
+  const { isAuthenticated, isOnboarded, loading } = useAuthStore();
+  if (loading) return (
+    <div className="min-h-dvh flex items-center justify-center bg-[var(--surface)]">
+      <div className="w-10 h-10 rounded-2xl bg-[var(--rose)] animate-pulse" />
+    </div>
+  );
+  if (!isAuthenticated) return <Navigate to="/auth" replace />;
   if (!isOnboarded) return <Navigate to="/onboarding" replace />;
   return children;
 }
 
+function OnboardingRoute({ children }) {
+  const { isAuthenticated, isOnboarded, loading } = useAuthStore();
+  if (loading) return (
+    <div className="min-h-dvh flex items-center justify-center bg-[var(--surface)]">
+      <div className="w-10 h-10 rounded-2xl bg-[var(--rose)] animate-pulse" />
+    </div>
+  );
+  if (!isAuthenticated) return <Navigate to="/auth" replace />;
+  if (isOnboarded) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function RootRedirect() {
-  const { isOnboarded } = useAuthStore();
-  return <Navigate to={isOnboarded ? '/dashboard' : '/onboarding'} replace />;
+  const { isAuthenticated, isOnboarded, loading } = useAuthStore();
+  if (loading) return (
+    <div className="min-h-dvh flex items-center justify-center bg-[var(--surface)]">
+      <div className="w-10 h-10 rounded-2xl bg-[var(--rose)] animate-pulse" />
+    </div>
+  );
+  if (!isAuthenticated) return <Navigate to="/auth" replace />;
+  if (!isOnboarded) return <Navigate to="/onboarding" replace />;
+  return <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {
-  const { loadCouple } = useAuthStore();
+  const { initialize } = useAuthStore();
 
-  useEffect(() => { loadCouple(); }, []);
+  useEffect(() => { initialize(); }, []);
 
   return (
     <BrowserRouter>
@@ -48,21 +73,21 @@ export default function App() {
             boxShadow: '0 4px 20px rgba(212,83,126,0.12)',
           },
           success: { iconTheme: { primary: '#1D9E75', secondary: '#fff' } },
-          error:   { iconTheme: { primary: '#D4537E', secondary: '#fff' } },
+          error: { iconTheme: { primary: '#D4537E', secondary: '#fff' } },
         }}
       />
 
       <Routes>
         <Route path="/" element={<RootRedirect />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/auth" element={<Auth />} />
 
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          }
-        >
+        <Route path="/onboarding" element={
+          <OnboardingRoute><Onboarding /></OnboardingRoute>
+        } />
+
+        <Route element={
+          <ProtectedRoute><AppShell /></ProtectedRoute>
+        }>
           <Route path="/dashboard"    element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/goals"        element={<Goals />} />

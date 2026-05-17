@@ -1,32 +1,65 @@
 import { create } from 'zustand';
-import db from '../db/database';
+import { supabase } from '../lib/supabase';
+import useAuthStore from './authStore';
+
+const getCoupleId = () => useAuthStore.getState().couple?.id;
+
+function mapSplit(row) {
+  return {
+    ...row,
+    totalAmount: row.total_amount,
+    paidBy: row.paid_by,
+    splitType: row.split_type,
+    customSplit: row.items || null,
+  };
+}
 
 const useSplitStore = create((set, get) => ({
   splits: [],
   loading: false,
 
   loadSplits: async () => {
+    const coupleId = getCoupleId();
+    if (!coupleId) return;
     set({ loading: true });
-    const splits = await db.splitBills.orderBy('date').reverse().toArray();
-    set({ splits, loading: false });
+    const { data } = await supabase
+      .from('split_bills')
+      .select('*')
+      .eq('couple_id', coupleId)
+      .order('date', { ascending: false });
+    set({ splits: (data || []).map(mapSplit), loading: false });
   },
 
   addSplit: async (data) => {
-    const id = await db.splitBills.add({ ...data, settled: false, date: data.date || new Date().toISOString() });
-    const split = await db.splitBills.get(id);
-    set((s) => ({ splits: [split, ...s.splits] }));
-    return id;
+    const coupleId = getCoupleId();
+    if (!coupleId) return;
+    const { data: row } = await supabase
+      .from('split_bills')
+      .insert({
+        couple_id: coupleId,
+        description: data.description,
+        total_amount: data.totalAmount,
+        paid_by: data.paidBy,
+        split_type: data.splitType,
+        items: data.customSplit || null,
+        settled: false,
+        date: data.date || new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (row) set((s) => ({ splits: [mapSplit(row), ...s.splits] }));
+    return row?.id;
   },
 
   settleSplit: async (id) => {
-    await db.splitBills.update(id, { settled: true, settledAt: new Date().toISOString() });
+    await supabase.from('split_bills').update({ settled: true }).eq('id', id);
     set((s) => ({
-      splits: s.splits.map((sp) => (sp.id === id ? { ...sp, settled: true } : sp)),
+      splits: s.splits.map((sp) => sp.id === id ? { ...sp, settled: true } : sp),
     }));
   },
 
   deleteSplit: async (id) => {
-    await db.splitBills.delete(id);
+    await supabase.from('split_bills').delete().eq('id', id);
     set((s) => ({ splits: s.splits.filter((sp) => sp.id !== id) }));
   },
 

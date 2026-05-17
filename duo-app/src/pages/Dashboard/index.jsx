@@ -27,7 +27,7 @@ const fadeUp = {
 };
 
 export default function Dashboard() {
-  const { couple, activeUser, loadCouple } = useAuthStore();
+  const { couple, activeUser } = useAuthStore();
   const { transactions, loadTransactions } = useTransactionStore();
   const { goals, loadGoals } = useGoalStore();
   const { budgets, loadBudgets } = useBudgetStore();
@@ -43,7 +43,6 @@ export default function Dashboard() {
   const monthName = format(now, 'MMMM', { locale: ptBR });
 
   useEffect(() => {
-    loadCouple();
     loadTransactions();
     loadGoals();
     loadBudgets();

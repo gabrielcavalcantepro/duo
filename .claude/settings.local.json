@@ -5,7 +5,10 @@
       "Bash(npm install *)",
       "Bash(npx tailwindcss *)",
       "Bash(npm run *)",
-      "Bash(curl -s http://localhost:5173)"
+      "Bash(curl -s http://localhost:5173)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\gabri\\\\Desktop\\\\duo\\\\duo-app\\\\src\" -Recurse -Force | Select-Object FullName | ConvertTo-Csv -NoTypeInformation | ForEach-Object { $_ -replace \"^\"\"\", \"\" -replace \"\"\"$\", \"\" } | Sort-Object)",
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\gabri\\\\Desktop\\\\duo\\\\duo-app\\\\src\\\\lib\", \"C:\\\\Users\\\\gabri\\\\Desktop\\\\duo\\\\duo-app\\\\src\\\\pages\\\\Auth\", \"C:\\\\Users\\\\gabri\\\\Desktop\\\\duo\\\\supabase\\\\functions\\\\hotmart-webhook\")",
+      "Bash(Out-Null)"
     ]
   }
 }

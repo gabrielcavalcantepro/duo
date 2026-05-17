@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import db from '../db/database';
+import { supabase } from '../lib/supabase';
+import useAuthStore from './authStore';
+
+const getCoupleId = () => useAuthStore.getState().couple?.id;
+
+function mapDay(row) {
+  return {
+    ...row,
+    completedAt: row.completed_at,
+  };
+}
 
 const useChallenge = create(
   persist(
@@ -10,34 +20,52 @@ const useChallenge = create(
       loading: false,
 
       loadChallenge: async () => {
+        const coupleId = getCoupleId();
+        if (!coupleId) return;
         set({ loading: true });
-        const days = await db.challengeDays.orderBy('day').toArray();
-        set({ days, loading: false });
+        const { data } = await supabase
+          .from('challenge_days')
+          .select('*')
+          .eq('couple_id', coupleId)
+          .order('day', { ascending: true });
+        set({ days: (data || []).map(mapDay), loading: false });
       },
 
       startChallenge: async () => {
-        await db.challengeDays.clear();
+        const coupleId = getCoupleId();
+        if (!coupleId) return;
+        await supabase.from('challenge_days').delete().eq('couple_id', coupleId);
         const startDate = new Date().toISOString();
         set({ days: [], startDate });
       },
 
       completeDay: async (day, note = '') => {
+        const coupleId = getCoupleId();
+        if (!coupleId) return;
         const existing = get().days.find((d) => d.day === day);
         const completedAt = new Date().toISOString();
+
         if (existing) {
-          await db.challengeDays.update(existing.id, { completed: true, completedAt, note });
+          await supabase.from('challenge_days')
+            .update({ completed: true, completed_at: completedAt, note })
+            .eq('id', existing.id);
           set((s) => ({
-            days: s.days.map((d) => (d.day === day ? { ...d, completed: true, completedAt, note } : d)),
+            days: s.days.map((d) => d.day === day ? { ...d, completed: true, completedAt, note } : d),
           }));
         } else {
-          const id = await db.challengeDays.add({ day, completed: true, completedAt, note });
-          const record = await db.challengeDays.get(id);
-          set((s) => ({ days: [...s.days, record] }));
+          const { data: row } = await supabase
+            .from('challenge_days')
+            .insert({ couple_id: coupleId, day, completed: true, completed_at: completedAt, note })
+            .select()
+            .single();
+          if (row) set((s) => ({ days: [...s.days, mapDay(row)] }));
         }
       },
 
       resetChallenge: async () => {
-        await db.challengeDays.clear();
+        const coupleId = getCoupleId();
+        if (!coupleId) return;
+        await supabase.from('challenge_days').delete().eq('couple_id', coupleId);
         set({ days: [], startDate: new Date().toISOString() });
       },
 

@@ -5,61 +5,92 @@ import Welcome from './Welcome';
 import CoupleSetup from './CoupleSetup';
 import FirstGoal from './FirstGoal';
 import useAuthStore from '../../store/authStore';
-import useGoalStore from '../../store/goalStore';
-import db, { seedDemoData } from '../../db/database';
+import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [coupleData, setCoupleData] = useState(null);
   const navigate = useNavigate();
-  const { setCouple, setActiveUser } = useAuthStore();
-  const { loadGoals } = useGoalStore();
+  const { appUser, setCouple, setActiveUser, generateInviteCode } = useAuthStore();
 
   const handleWelcome = () => setStep(1);
 
-  const handleDemo = async () => {
-    await seedDemoData();
-    const couples = await db.couple.toArray();
-    if (couples[0]) {
-      setCouple(couples[0]);
-      setActiveUser(couples[0].partner1Name);
-    }
-    navigate('/dashboard');
-  };
-
   const handleCoupleSetup = async (data) => {
-    const id = await db.couple.add({
-      ...data,
+    if (!appUser?.id) {
+      toast.error('Usuário não encontrado. Tente fazer login novamente.');
+      return;
+    }
+
+    const inviteCode = generateInviteCode();
+
+    const insertPayload = {
+      name: data.name,
+      closing_day: data.closingDay || 5,
+      salary1: data.salary1 || 0,
+      salary2: data.salary2 || 0,
+      monthly_savings_goal: data.monthlySavingsGoal || 0,
+      partner1_id: appUser.id,
+      invite_code: inviteCode,
       currency: 'BRL',
-      createdAt: new Date().toISOString(),
-    });
-    const couple = await db.couple.get(id);
-    setCouple(couple);
-    setActiveUser(couple.partner1Name);
-    setCoupleData(couple);
+    };
+
+    console.log('[handleCoupleSetup] appUser.id:', appUser.id);
+    console.log('[handleCoupleSetup] insert payload:', insertPayload);
+
+    const { data: couple, error } = await supabase
+      .from('couples')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[handleCoupleSetup] Supabase error:', error);
+      toast.error('Erro ao criar o casal. Tente novamente.');
+      return;
+    }
+
+    await supabase
+      .from('app_users')
+      .update({ couple_id: couple.id, color: data.partner1Color || '#D4537E', name: data.partner1Name || appUser.name })
+      .eq('id', appUser.id);
+
+    // Enrich with names/colors locally since these columns may not exist in the DB yet
+    const enrichedCouple = {
+      ...couple,
+      partner1_name: data.partner1Name || appUser.name,
+      partner1_color: data.partner1Color || '#D4537E',
+      partner2_name: data.partner2Name || '',
+      partner2_color: data.partner2Color || '#1D9E75',
+    };
+    setCouple(enrichedCouple);
+    setActiveUser(data.partner1Name || appUser.name);
+    setCoupleData(enrichedCouple);
     setStep(2);
   };
 
   const handleGoal = async (goalData) => {
-    if (goalData) {
-      await db.goals.add({
-        ...goalData,
-        currentAmount: 0,
-        priority: 'alta',
+    if (goalData && coupleData) {
+      await supabase.from('goals').insert({
+        name: goalData.name,
+        emoji: goalData.emoji || '🎯',
+        target_amount: goalData.targetAmount,
+        current_amount: 0,
+        deadline: goalData.deadline || null,
         color: '#D4537E',
-        createdAt: new Date().toISOString(),
+        priority: 'alta',
+        couple_id: coupleData.id,
       });
-      await loadGoals();
     }
-    toast.success(`Bem-vindos ao Duo, ${coupleData?.name || 'casal'}!`);
+    const coupleName = coupleData?.name || coupleData?.partner1_name || 'casal';
+    toast.success(`Bem-vindos ao Duo, ${coupleName}!`);
     navigate('/dashboard');
   };
 
   return (
     <div className="min-h-dvh bg-[var(--surface)] flex flex-col">
       <AnimatePresence mode="wait">
-        {step === 0 && <Welcome key="welcome" onNext={handleWelcome} onDemo={handleDemo} />}
+        {step === 0 && <Welcome key="welcome" onNext={handleWelcome} />}
         {step === 1 && <CoupleSetup key="setup" onNext={handleCoupleSetup} />}
         {step === 2 && <FirstGoal key="goal" couple={coupleData} onNext={handleGoal} />}
       </AnimatePresence>

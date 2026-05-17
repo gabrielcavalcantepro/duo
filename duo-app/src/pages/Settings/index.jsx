@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Wallet, Bell, Trash2, Download, ChevronRight, AlertTriangle } from 'lucide-react';
+import { User, Wallet, Trash2, Download, ChevronRight, Copy, LogOut } from 'lucide-react';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -9,17 +9,17 @@ import Input, { CurrencyInput } from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useAuthStore from '../../store/authStore';
+import { supabase } from '../../lib/supabase';
 import { PARTNER_COLORS } from '../../utils/categories';
-import db from '../../db/database';
 import toast from 'react-hot-toast';
 
 export default function Settings() {
-  const { couple, updateCouple, clearCouple } = useAuthStore();
+  const { couple, updateCouple, logout } = useAuthStore();
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [showFinance, setShowFinance] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [clearing, setClearing] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const [form, setForm] = useState({
     name: couple?.name || '',
@@ -74,16 +74,30 @@ export default function Settings() {
 
   const handleExport = async () => {
     try {
+      const coupleId = couple?.id;
+      if (!coupleId) return;
+
+      const [t, g, gc, b, m, cd, sb] = await Promise.all([
+        supabase.from('transactions').select('*').eq('couple_id', coupleId),
+        supabase.from('goals').select('*').eq('couple_id', coupleId),
+        supabase.from('goal_contributions').select('*').eq('couple_id', coupleId),
+        supabase.from('budgets').select('*').eq('couple_id', coupleId),
+        supabase.from('meetings').select('*').eq('couple_id', coupleId),
+        supabase.from('challenge_days').select('*').eq('couple_id', coupleId),
+        supabase.from('split_bills').select('*').eq('couple_id', coupleId),
+      ]);
+
       const data = {
-        couple: await db.couple.toArray(),
-        transactions: await db.transactions.toArray(),
-        goals: await db.goals.toArray(),
-        goalContributions: await db.goalContributions.toArray(),
-        budgets: await db.budgets.toArray(),
-        meetings: await db.meetings.toArray(),
-        challengeDays: await db.challengeDays.toArray(),
-        splitBills: await db.splitBills.toArray(),
+        couple,
+        transactions: t.data || [],
+        goals: g.data || [],
+        goalContributions: gc.data || [],
+        budgets: b.data || [],
+        meetings: m.data || [],
+        challengeDays: cd.data || [],
+        splitBills: sb.data || [],
       };
+
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -97,12 +111,17 @@ export default function Settings() {
     }
   };
 
-  const handleClear = async () => {
-    setClearing(true);
-    await clearCouple();
-    setClearing(false);
-    setShowClearConfirm(false);
-    navigate('/onboarding');
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    await logout();
+    setLoggingOut(false);
+    setShowLogoutConfirm(false);
+    navigate('/auth');
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(couple?.invite_code || '');
+    toast.success('Código copiado!');
   };
 
   const SETTINGS_SECTIONS = [
@@ -129,13 +148,30 @@ export default function Settings() {
                     className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-semibold ring-4 ring-white"
                     style={{ backgroundColor: p.color, marginLeft: i > 0 ? '-8px' : '0' }}
                   >
-                    {p.name[0]}
+                    {p.name?.[0] || '?'}
                   </div>
                 ))}
               </div>
               <h2 className="font-serif text-2xl text-[var(--ink)]">{couple.name}</h2>
-              <p className="font-sans text-sm text-[var(--muted)]">{couple.partner1Name} & {couple.partner2Name}</p>
+              <p className="font-sans text-sm text-[var(--muted)]">{couple.partner1Name} & {couple.partner2Name || '—'}</p>
             </Card>
+          </motion.div>
+        )}
+
+        {/* Invite code */}
+        {couple?.invite_code && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <div className="bg-[var(--rose-light)] rounded-2xl p-5 border-2 border-dashed border-[var(--rose-mid)]">
+              <p className="text-xs font-medium text-[var(--rose-dark)] uppercase tracking-wide mb-1">Código do casal</p>
+              <p className="font-mono text-2xl font-bold text-[var(--rose)] tracking-widest mb-2">{couple.invite_code}</p>
+              <p className="text-xs text-[var(--muted)] mb-3">Compartilhe com seu parceiro(a) para ele(a) entrar no Duo junto com você</p>
+              <button
+                onClick={handleCopyCode}
+                className="flex items-center gap-1.5 text-sm text-[var(--rose)] font-medium hover:opacity-70 transition-opacity"
+              >
+                <Copy size={14} /> Copiar código
+              </button>
+            </div>
           </motion.div>
         )}
 
@@ -179,23 +215,21 @@ export default function Settings() {
           </button>
 
           <button
-            onClick={() => setShowClearConfirm(true)}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-full flex items-center gap-3 p-4 bg-white rounded-card shadow-card border border-red-100 hover:border-red-200 transition-colors"
           >
             <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-              <Trash2 size={18} className="text-red-500" />
+              <LogOut size={18} className="text-red-500" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-sans text-sm font-medium text-red-600">Limpar todos os dados</p>
-              <p className="font-sans text-xs text-red-400">Esta ação não pode ser desfeita</p>
+              <p className="font-sans text-sm font-medium text-red-600">Sair da conta</p>
+              <p className="font-sans text-xs text-red-400">Você precisará fazer login novamente</p>
             </div>
           </button>
         </div>
 
-        {/* App version */}
         <div className="text-center py-4">
           <p className="font-sans text-xs text-[var(--muted)]">Duo v1.0.0 · Finanças que fortalecem o casal</p>
-          <p className="font-sans text-xs text-[var(--muted)] mt-1">Todos os dados são armazenados localmente no seu dispositivo</p>
         </div>
       </div>
 
@@ -214,7 +248,7 @@ export default function Settings() {
         <div className="space-y-4">
           <Input label="Nome do casal" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
           <div className="space-y-3">
-            <Input label={`Nome — Pessoa 1`} value={form.partner1Name} onChange={(e) => setForm((f) => ({ ...f, partner1Name: e.target.value }))} />
+            <Input label="Nome — Pessoa 1" value={form.partner1Name} onChange={(e) => setForm((f) => ({ ...f, partner1Name: e.target.value }))} />
             <div>
               <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Cor — {form.partner1Name}</p>
               <div className="flex gap-2.5">
@@ -228,7 +262,7 @@ export default function Settings() {
             </div>
           </div>
           <div className="space-y-3">
-            <Input label={`Nome — Pessoa 2`} value={form.partner2Name} onChange={(e) => setForm((f) => ({ ...f, partner2Name: e.target.value }))} />
+            <Input label="Nome — Pessoa 2" value={form.partner2Name} onChange={(e) => setForm((f) => ({ ...f, partner2Name: e.target.value }))} />
             <div>
               <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Cor — {form.partner2Name}</p>
               <div className="flex gap-2.5">
@@ -274,13 +308,13 @@ export default function Settings() {
       </Modal>
 
       <ConfirmDialog
-        open={showClearConfirm}
-        onClose={() => setShowClearConfirm(false)}
-        onConfirm={handleClear}
-        title="Limpar todos os dados"
-        message="Todos os seus dados serão apagados permanentemente. Esta ação não pode ser desfeita. Tem certeza absoluta?"
+        open={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Sair da conta"
+        message="Você será desconectado e precisará fazer login novamente para acessar o Duo. Seus dados ficam salvos na nuvem."
         danger
-        loading={clearing}
+        loading={loggingOut}
       />
     </div>
   );

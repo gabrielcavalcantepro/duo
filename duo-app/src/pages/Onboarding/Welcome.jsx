@@ -10,7 +10,7 @@ function DuoLogo({ size = 56 }) {
   );
 }
 
-export default function Welcome({ onNext, onDemo }) {
+export default function Welcome({ onNext }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -86,12 +86,6 @@ export default function Welcome({ onNext, onDemo }) {
           >
             Configurar nosso casal →
           </Button>
-          <button
-            onClick={onDemo}
-            className="w-full py-3 font-sans text-sm text-white/70 hover:text-white transition-colors underline underline-offset-4"
-          >
-            Ver demonstração com dados fictícios
-          </button>
         </motion.div>
       </div>
 

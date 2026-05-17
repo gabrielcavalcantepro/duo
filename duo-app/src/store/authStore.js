@@ -1,50 +1,261 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import db from '../db/database';
+import { supabase } from '../lib/supabase';
+
+// Maps Supabase snake_case couple to camelCase for use throughout the app
+function mapCouple(c) {
+  if (!c) return null;
+  return {
+    ...c,
+    partner1Name: c.partner1_name || '',
+    partner1Color: c.partner1_color || '#D4537E',
+    partner2Name: c.partner2_name || '',
+    partner2Color: c.partner2_color || '#1D9E75',
+    closingDay: c.closing_day || 5,
+    monthlySavingsGoal: c.monthly_savings_goal || 0,
+  };
+}
+
+// Converts camelCase couple fields to snake_case and strips unknown keys for Supabase
+// Only includes columns that exist in the couples table schema
+const COUPLE_DB_COLUMNS = new Set([
+  'name', 'closing_day', 'salary1', 'salary2', 'monthly_savings_goal', 'currency',
+  'partner1_id', 'partner2_id', 'invite_code',
+]);
+
+function toDbCouple(data) {
+  const result = {};
+  if ('name' in data) result.name = data.name;
+  if ('closingDay' in data) result.closing_day = data.closingDay;
+  if ('salary1' in data) result.salary1 = data.salary1;
+  if ('salary2' in data) result.salary2 = data.salary2;
+  if ('monthlySavingsGoal' in data) result.monthly_savings_goal = data.monthlySavingsGoal;
+  if ('currency' in data) result.currency = data.currency;
+  return result;
+}
 
 const useAuthStore = create(
   persist(
     (set, get) => ({
+      session: null,
+      appUser: null,
       couple: null,
       activeUser: null,
+      isAuthenticated: false,
       isOnboarded: false,
+      loading: true,
 
-      setCouple: (couple) => set({ couple, isOnboarded: true }),
-      setActiveUser: (user) => set({ activeUser: user }),
+      initialize: async () => {
+        set({ loading: true });
+        const { data: { session } } = await supabase.auth.getSession();
 
-      loadCouple: async () => {
-        const couples = await db.couple.toArray();
-        if (couples.length > 0) {
-          const couple = couples[0];
-          set({ couple, isOnboarded: true, activeUser: get().activeUser || couple.partner1Name });
+        if (session) {
+          await get().loadUserData(session);
+        } else {
+          set({ loading: false });
+        }
+
+        supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'SIGNED_IN' && session) {
+            await get().loadUserData(session);
+          } else if (event === 'SIGNED_OUT') {
+            set({
+              session: null,
+              appUser: null,
+              couple: null,
+              activeUser: null,
+              isAuthenticated: false,
+              isOnboarded: false,
+              loading: false,
+            });
+          }
+        });
+      },
+
+      loadUserData: async (session) => {
+        set({ session, isAuthenticated: true });
+
+        const { data: appUser } = await supabase
+          .from('app_users')
+          .select('*')
+          .eq('auth_id', session.user.id)
+          .single();
+
+        if (!appUser) {
+          set({ loading: false });
+          return;
+        }
+
+        set({ appUser, activeUser: get().activeUser || appUser.name });
+
+        if (appUser.couple_id) {
+          const { data: couple } = await supabase
+            .from('couples')
+            .select('*')
+            .eq('id', appUser.couple_id)
+            .single();
+
+          set({ couple: mapCouple(couple), isOnboarded: !!couple, loading: false });
+        } else {
+          set({ loading: false });
         }
       },
+
+      registerWithEmail: async (email, password, name) => {
+        const { data: subscriber, error: subError } = await supabase
+          .from('subscribers')
+          .select('email, status')
+          .eq('email', email.toLowerCase().trim())
+          .single();
+
+        if (subError || !subscriber) {
+          throw new Error('Email não encontrado. Confirme o email usado na compra na Hotmart.');
+        }
+
+        if (subscriber.status !== 'active') {
+          throw new Error('Sua assinatura está inativa. Entre em contato com o suporte.');
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email.toLowerCase().trim(),
+          password,
+          options: { data: { name } },
+        });
+
+        if (error) {
+          if (error.message.includes('already registered')) {
+            throw new Error('Este email já possui uma conta. Faça login.');
+          }
+          throw error;
+        }
+
+        const { error: userError } = await supabase
+          .from('app_users')
+          .insert({
+            auth_id: data.user.id,
+            email: email.toLowerCase().trim(),
+            name,
+            color: '#D4537E',
+            is_partner: false,
+          });
+
+        if (userError) throw userError;
+
+        // Load user data immediately so state is ready before navigate('/onboarding')
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) await get().loadUserData(session);
+
+        return data;
+      },
+
+      registerWithCoupleCode: async (code, name, email, password) => {
+        const { data: couple, error: coupleError } = await supabase
+          .from('couples')
+          .select('*')
+          .eq('invite_code', code.toUpperCase().trim())
+          .single();
+
+        if (coupleError || !couple) {
+          throw new Error('Código inválido. Verifique com seu parceiro(a).');
+        }
+
+        if (couple.partner2_id) {
+          throw new Error('Este casal já tem dois membros vinculados.');
+        }
+
+        const { data, error } = await supabase.auth.signUp({
+          email: email.toLowerCase().trim(),
+          password,
+          options: { data: { name } },
+        });
+
+        if (error) {
+          if (error.message.includes('already registered')) {
+            throw new Error('Este email já possui uma conta. Faça login.');
+          }
+          throw error;
+        }
+
+        const { data: appUser, error: userError } = await supabase
+          .from('app_users')
+          .insert({
+            auth_id: data.user.id,
+            email: email.toLowerCase().trim(),
+            name,
+            couple_id: couple.id,
+            color: '#1D9E75',
+            is_partner: true,
+          })
+          .select()
+          .single();
+
+        if (userError) throw userError;
+
+        await supabase
+          .from('couples')
+          .update({ partner2_id: appUser.id })
+          .eq('id', couple.id);
+
+        // Load user data immediately so state is ready before navigate('/dashboard')
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) await get().loadUserData(session);
+
+        return data;
+      },
+
+      login: async (email, password) => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase().trim(),
+          password,
+        });
+
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('Email ou senha incorretos.');
+          }
+          throw error;
+        }
+
+        console.log('[login] session:', data.session);
+        await get().loadUserData(data.session);
+        return data;
+      },
+
+      logout: async () => {
+        await supabase.auth.signOut();
+      },
+
+      setCouple: (couple) => set({ couple: mapCouple(couple), isOnboarded: true }),
+
+      setActiveUser: (user) => set({ activeUser: user }),
 
       updateCouple: async (data) => {
         const { couple } = get();
         if (!couple) return;
-        await db.couple.update(couple.id, data);
-        set({ couple: { ...couple, ...data } });
+
+        const dbData = toDbCouple(data);
+
+        const { error } = await supabase
+          .from('couples')
+          .update(dbData)
+          .eq('id', couple.id);
+
+        if (!error) set({ couple: mapCouple({ ...couple, ...data, ...dbData }) });
       },
 
-      clearCouple: async () => {
-        await db.couple.clear();
-        await db.transactions.clear();
-        await db.goals.clear();
-        await db.goalContributions.clear();
-        await db.budgets.clear();
-        await db.meetings.clear();
-        await db.challengeDays.clear();
-        await db.splitBills.clear();
-        await db.categories.clear();
-        set({ couple: null, activeUser: null, isOnboarded: false });
+      generateInviteCode: () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = 'DUO-';
+        for (let i = 0; i < 4; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
       },
     }),
     {
       name: 'duo-auth',
       partialize: (state) => ({
         activeUser: state.activeUser,
-        isOnboarded: state.isOnboarded,
       }),
     }
   )
