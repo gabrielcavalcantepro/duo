@@ -15,58 +15,75 @@ export default function Onboarding() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const navigate = useNavigate();
-  const { appUser, setCouple, setActiveUser, generateInviteCode } = useAuthStore();
+  const { setCouple, setActiveUser } = useAuthStore();
 
   const handleWelcome = () => setStep(1);
 
   const handleCoupleSetup = async (data) => {
-    if (!appUser?.id) {
-      toast.error('Usuário não encontrado. Tente fazer login novamente.');
-      return;
+    let currentAppUser = useAuthStore.getState().appUser;
+
+    if (!currentAppUser?.id) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        navigate('/auth');
+        return;
+      }
+      const { data: freshUser } = await supabase
+        .from('app_users')
+        .select('*')
+        .eq('auth_id', session.user.id)
+        .single();
+
+      if (!freshUser) {
+        toast.error('Usuário não encontrado. Tente fazer login novamente.');
+        navigate('/auth');
+        return;
+      }
+      currentAppUser = freshUser;
+      useAuthStore.setState({ appUser: freshUser });
     }
 
-    const inviteCode = generateInviteCode();
-
-    const insertPayload = {
-      name: data.name,
-      closing_day: data.closingDay || 5,
-      salary1: data.salary1 || 0,
-      salary2: data.salary2 || 0,
-      monthly_savings_goal: data.monthlySavingsGoal || 0,
-      partner1_id: appUser.id,
-      invite_code: inviteCode,
-      currency: 'BRL',
-    };
-
-    console.log('[handleCoupleSetup] appUser.id:', appUser.id);
-    console.log('[handleCoupleSetup] insert payload:', insertPayload);
+    const inviteCode = useAuthStore.getState().generateInviteCode();
 
     const { data: couple, error } = await supabase
       .from('couples')
-      .insert(insertPayload)
+      .insert({
+        name: data.name,
+        partner1_id: currentAppUser.id,
+        invite_code: inviteCode,
+        currency: 'BRL',
+        closing_day: data.closingDay,
+        partner1_name: data.partner1Name,
+        partner1_color: data.partner1Color,
+      })
       .select()
       .single();
 
     if (error) {
-      console.error('[handleCoupleSetup] Supabase error:', error);
       toast.error('Erro ao criar o casal. Tente novamente.');
+      console.error(error);
       return;
     }
 
     await supabase
       .from('app_users')
-      .update({ couple_id: couple.id, color: data.partner1Color || '#D4537E', name: data.partner1Name || appUser.name })
-      .eq('id', appUser.id);
+      .update({
+        couple_id: couple.id,
+        color: data.partner1Color,
+        name: data.partner1Name,
+      })
+      .eq('id', currentAppUser.id);
 
     const enrichedCouple = {
       ...couple,
-      partner1_name: data.partner1Name || appUser.name,
-      partner1_color: data.partner1Color || '#D4537E',
-      partner2_name: data.partner2Name || '',
-      partner2_color: data.partner2Color || '#1D9E75',
+      partner1_name: data.partner1Name,
+      partner1_color: data.partner1Color,
+      partner2_name: '',
+      partner2_color: '#1D9E75',
     };
     setCouple(enrichedCouple);
-    setActiveUser(data.partner1Name || appUser.name);
+    setActiveUser(data.partner1Name);
     setCoupleData(enrichedCouple);
     setInviteCode(couple.invite_code);
     setStep(2);
