@@ -44,6 +44,7 @@ const useAuthStore = create(
       isAuthenticated: false,
       isOnboarded: false,
       needsProfileSetup: false,
+      completingOnboarding: false,
       loading: true,
 
       initialize: async () => {
@@ -275,6 +276,9 @@ const useAuthStore = create(
       setCouple: (couple) => set({ couple: mapCouple(couple), isOnboarded: true }),
 
       setActiveUser: (user) => set({ activeUser: user }),
+
+      startOnboarding: () => set({ completingOnboarding: true }),
+      finishOnboarding: () => set({ completingOnboarding: false }),
 
       updateCouple: async (data) => {
         const { couple } = get();

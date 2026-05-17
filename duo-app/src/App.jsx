@@ -33,14 +33,14 @@ function ProtectedRoute({ children }) {
 }
 
 function OnboardingRoute({ children }) {
-  const { isAuthenticated, isOnboarded, loading } = useAuthStore();
+  const { isAuthenticated, isOnboarded, loading, completingOnboarding } = useAuthStore();
   if (loading) return (
     <div className="min-h-dvh flex items-center justify-center bg-[var(--surface)]">
       <div className="w-10 h-10 rounded-2xl bg-[var(--rose)] animate-pulse" />
     </div>
   );
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
-  if (isOnboarded) return <Navigate to="/dashboard" replace />;
+  if (isOnboarded && !completingOnboarding) return <Navigate to="/dashboard" replace />;
   return children;
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import Welcome from './Welcome';
@@ -16,6 +16,10 @@ export default function Onboarding() {
   const [inviteCode, setInviteCode] = useState('');
   const navigate = useNavigate();
   const { setCouple, setActiveUser } = useAuthStore();
+
+  useEffect(() => {
+    useAuthStore.getState().startOnboarding();
+  }, []);
 
   const handleWelcome = () => setStep(1);
 
@@ -112,6 +116,7 @@ export default function Onboarding() {
 
   const handleCloseInviteModal = () => {
     setShowInviteModal(false);
+    useAuthStore.getState().finishOnboarding();
     navigate('/dashboard');
   };
 
