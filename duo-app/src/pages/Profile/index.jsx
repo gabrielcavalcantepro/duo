@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, LogOut, Lock, Palette, User, ChevronRight, Shield } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
@@ -14,12 +14,18 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(appUser?.name || '');
   const [selectedColor, setSelectedColor] = useState(appUser?.color || '#D4537E');
-  const [avatarUrl, setAvatarUrl] = useState(appUser?.avatar_url || null);
+  const [avatarUrl, setAvatarUrl] = useState(
+    useAuthStore.getState().appUser?.avatar_url || null
+  );
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [rawImage, setRawImage] = useState(null);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileRef = useRef();
+
+  useEffect(() => {
+    if (appUser?.avatar_url) setAvatarUrl(appUser.avatar_url);
+  }, [appUser?.avatar_url]);
 
   const isPartner1 = !appUser?.is_partner;
   const partnerColor = isPartner1 ? couple?.partner2_color : couple?.partner1_color;
@@ -55,13 +61,18 @@ export default function Profile() {
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+      const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
 
       await supabase.from('app_users').update({ avatar_url: publicUrl }).eq('id', appUser.id);
 
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(urlWithTimestamp);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (session) await loadUserData(session);
+
+      useAuthStore.setState(state => ({
+        appUser: { ...state.appUser, avatar_url: urlWithTimestamp },
+      }));
 
       toast.success('Foto atualizada!');
     } catch (err) {

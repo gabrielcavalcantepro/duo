@@ -87,7 +87,13 @@ const useAuthStore = create(
           return;
         }
 
-        set({ appUser, activeUser: get().activeUser || appUser.name });
+        const existingAppUser = get().appUser;
+        const mergedAppUser = {
+          ...existingAppUser,
+          ...appUser,
+          avatar_url: appUser.avatar_url || existingAppUser?.avatar_url || null,
+        };
+        set({ appUser: mergedAppUser, activeUser: get().activeUser || appUser.name });
 
         if (appUser.couple_id) {
           const { data: couple } = await supabase
@@ -260,6 +266,7 @@ const useAuthStore = create(
       name: 'duo-auth',
       partialize: (state) => ({
         activeUser: state.activeUser,
+        appUser: state.appUser,
       }),
     }
   )
