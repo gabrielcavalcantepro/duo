@@ -12,6 +12,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import useTransactionStore from '../../store/transactionStore';
 import useAuthStore from '../../store/authStore';
 import { formatBRL, formatRelativeDate, formatDate } from '../../utils/formatters';
+import { getPartnerAvatar } from '../../utils/avatarHelper';
 import { getCategoryByName, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../../utils/categories';
 import { getMonthlyStats } from '../../utils/calculations';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -212,6 +213,7 @@ export default function Transactions() {
                             <Avatar
                               name={t.paidBy}
                               color={t.paidBy === couple.partner1Name ? couple.partner1Color : couple.partner2Color}
+                              src={getPartnerAvatar(couple, t.paidBy)}
                               size="xs"
                             />
                           )}
