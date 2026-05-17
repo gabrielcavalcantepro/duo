@@ -44,14 +44,14 @@ export default function Onboarding() {
       useAuthStore.setState({ appUser: freshUser });
     }
 
-    const inviteCode = useAuthStore.getState().generateInviteCode();
+    const generatedCode = useAuthStore.getState().generateInviteCode();
 
     const { data: couple, error } = await supabase
       .from('couples')
       .insert({
         name: data.name,
         partner1_id: currentAppUser.id,
-        invite_code: inviteCode,
+        invite_code: generatedCode,
         currency: 'BRL',
         closing_day: data.closingDay,
         partner1_name: data.partner1Name,
