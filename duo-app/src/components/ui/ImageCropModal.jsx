@@ -2,15 +2,17 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ZoomIn, ZoomOut, Check } from 'lucide-react';
 
+const CROP_SIZE = 280;
+const OUTPUT_SIZE = 300;
+
 export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
   const canvasRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [lastPinchDistance, setLastPinchDistance] = useState(null);
   const dragStart = useRef(null);
   const imgRef = useRef(null);
-
-  const OUTPUT_SIZE = 300;
 
   useEffect(() => {
     if (!open || !imageSrc) return;
@@ -41,7 +43,6 @@ export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
     ctx.drawImage(img, sx, sy, sw, sh);
     ctx.restore();
 
-    // dim ring outside circle
     ctx.save();
     ctx.globalCompositeOperation = 'destination-over';
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -53,6 +54,7 @@ export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
     if (imgRef.current) draw(imgRef.current, zoom, offset);
   }, [zoom, offset, draw]);
 
+  // Pointer (mouse) handlers
   const handlePointerDown = (e) => {
     setDragging(true);
     dragStart.current = { x: e.clientX - offset.x, y: e.clientY - offset.y };
@@ -60,12 +62,52 @@ export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
 
   const handlePointerMove = (e) => {
     if (!dragging) return;
-    const nx = e.clientX - dragStart.current.x;
-    const ny = e.clientY - dragStart.current.y;
-    setOffset({ x: nx, y: ny });
+    setOffset({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
   };
 
   const handlePointerUp = () => setDragging(false);
+
+  // Touch handlers with pinch-to-zoom
+  const getPinchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      setLastPinchDistance(getPinchDistance(e.touches));
+      setDragging(false);
+    } else if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setDragging(true);
+      dragStart.current = { x: touch.clientX - offset.x, y: touch.clientY - offset.y };
+      setLastPinchDistance(null);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    if (e.touches.length === 2) {
+      const newDistance = getPinchDistance(e.touches);
+      if (lastPinchDistance) {
+        const delta = (newDistance - lastPinchDistance) * 0.01;
+        setZoom((s) => Math.min(3, Math.max(0.3, s + delta)));
+      }
+      setLastPinchDistance(newDistance);
+    } else if (e.touches.length === 1 && dragging) {
+      const touch = e.touches[0];
+      setOffset({
+        x: touch.clientX - dragStart.current.x,
+        y: touch.clientY - dragStart.current.y,
+      });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setDragging(false);
+    setLastPinchDistance(null);
+  };
 
   const handleSave = () => {
     const canvas = canvasRef.current;
@@ -74,7 +116,6 @@ export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
     out.width = OUTPUT_SIZE;
     out.height = OUTPUT_SIZE;
     const ctx = out.getContext('2d');
-    const scale = OUTPUT_SIZE / canvas.width;
     ctx.save();
     ctx.beginPath();
     ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2);
@@ -87,50 +128,52 @@ export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
   return (
     <AnimatePresence>
       {open && (
-        <>
-          <motion.div
-            key="overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
-            onClick={onClose}
-          />
+        <motion.div
+          key="overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto"
+          onClick={onClose}
+        >
           <motion.div
             key="modal"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl overflow-hidden max-w-sm mx-auto"
+            className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl my-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="font-serif text-base text-[var(--ink)]">Ajustar foto</h3>
               <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
                 <X size={16} className="text-[var(--muted)]" />
               </button>
             </div>
 
-            <div className="p-4 flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-4">
               <canvas
                 ref={canvasRef}
-                width={280}
-                height={280}
-                className="rounded-full cursor-grab active:cursor-grabbing touch-none"
-                style={{ width: 280, height: 280 }}
+                width={CROP_SIZE}
+                height={CROP_SIZE}
+                className="rounded-full cursor-grab active:cursor-grabbing"
+                style={{ width: CROP_SIZE, height: CROP_SIZE, display: 'block', touchAction: 'none' }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
               />
 
-              <div className="flex items-center gap-3 w-full px-2">
-                <button onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))} className="text-[var(--muted)] hover:text-[var(--rose)]">
+              <div className="flex items-center gap-3 w-full">
+                <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))} className="text-[var(--muted)] hover:text-[var(--rose)]">
                   <ZoomOut size={18} />
                 </button>
                 <input
                   type="range"
-                  min={0.5}
+                  min={0.3}
                   max={3}
                   step={0.05}
                   value={zoom}
@@ -142,19 +185,17 @@ export default function ImageCropModal({ open, imageSrc, onSave, onClose }) {
                 </button>
               </div>
 
-              <p className="text-xs text-[var(--muted)] text-center">Arraste para reposicionar · Deslize para dar zoom</p>
+              <p className="text-xs text-[var(--muted)] text-center">Arraste para reposicionar · Pinça para dar zoom</p>
             </div>
 
-            <div className="px-4 pb-4">
-              <button
-                onClick={handleSave}
-                className="w-full py-3 bg-[var(--rose)] text-white rounded-full font-sans font-medium text-sm flex items-center justify-center gap-2"
-              >
-                <Check size={16} /> Usar esta foto
-              </button>
-            </div>
+            <button
+              onClick={handleSave}
+              className="mt-5 w-full py-3 bg-[var(--rose)] text-white rounded-full font-sans font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <Check size={16} /> Usar esta foto
+            </button>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

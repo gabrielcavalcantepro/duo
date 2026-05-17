@@ -60,7 +60,7 @@ export default function Goals() {
                         initial="hidden"
                         animate="visible"
                         onClick={() => navigate(`/goals/${goal.id}`)}
-                        className="bg-white rounded-card p-4 shadow-card border border-[var(--border)] cursor-pointer hover:shadow-rose transition-shadow"
+                        className="bg-white rounded-card p-4 shadow-card border border-[var(--border)] cursor-pointer hover:border-[var(--rose-mid)] hover:scale-[1.01] transition-all duration-200"
                       >
                         <div className="text-3xl mb-3 text-center">{goal.emoji}</div>
                         <p className="font-serif text-base text-[var(--ink)] leading-tight text-center mb-3">{goal.name}</p>

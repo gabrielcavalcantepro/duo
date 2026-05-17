@@ -36,8 +36,8 @@ export default function GoalDetail() {
 
   useEffect(() => { loadGoals(); }, []);
 
-  const goal = goals.find((g) => g.id === Number(id));
-  const goalContribs = getContributions(Number(id));
+  const goal = goals.find((g) => String(g.id) === String(id));
+  const goalContribs = getContributions(goal?.id);
 
   if (!goal) {
     return (
