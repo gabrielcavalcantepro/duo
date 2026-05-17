@@ -205,3 +205,33 @@ create policy "Casal cria seu perfil" on couples
 -- Subscribers só acessível via service role (webhook)
 create policy "Apenas service role acessa subscribers" on subscribers
   for all using (false);
+
+-- Coluna de avatar na tabela de usuários
+alter table app_users add column if not exists avatar_url text;
+
+-- Bucket de avatars no Supabase Storage
+insert into storage.buckets (id, name, public)
+  values ('avatars', 'avatars', true)
+  on conflict (id) do nothing;
+
+-- Políticas do bucket de avatars
+create policy "Avatars públicos para leitura" on storage.objects
+  for select using (bucket_id = 'avatars');
+
+create policy "Usuário faz upload do próprio avatar" on storage.objects
+  for insert with check (
+    bucket_id = 'avatars'
+    and auth.uid() is not null
+  );
+
+create policy "Usuário atualiza seu avatar" on storage.objects
+  for update using (
+    bucket_id = 'avatars'
+    and auth.uid() is not null
+  );
+
+create policy "Usuário deleta seu avatar" on storage.objects
+  for delete using (
+    bucket_id = 'avatars'
+    and auth.uid() is not null
+  );

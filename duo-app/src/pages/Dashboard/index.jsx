@@ -120,7 +120,7 @@ export default function Dashboard() {
             <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/4" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-1">
-                <span className="label-sm text-white/80">Disponível este mês</span>
+                <span style={{ color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '12px', fontWeight: 500 }}>Disponível este mês</span>
                 <Badge variant="ink" className="text-white/90 bg-white/20">
                   {monthName.charAt(0).toUpperCase() + monthName.slice(1)} {year}
                 </Badge>

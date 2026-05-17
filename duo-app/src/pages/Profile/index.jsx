@@ -4,6 +4,8 @@ import { ArrowLeft, Camera, LogOut, Lock, Palette, User, ChevronRight, Shield } 
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import { PARTNER_COLORS } from '../../utils/categories';
+import ImageCropModal from '../../components/ui/ImageCropModal';
+import ChangePasswordModal from '../../components/ui/ChangePasswordModal';
 import toast from 'react-hot-toast';
 
 export default function Profile() {
@@ -12,11 +14,62 @@ export default function Profile() {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(appUser?.name || '');
   const [selectedColor, setSelectedColor] = useState(appUser?.color || '#D4537E');
+  const [avatarUrl, setAvatarUrl] = useState(appUser?.avatar_url || null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImage, setRawImage] = useState(null);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileRef = useRef();
 
   const isPartner1 = !appUser?.is_partner;
   const partnerColor = isPartner1 ? couple?.partner2_color : couple?.partner1_color;
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('A foto deve ter no máximo 5 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setRawImage(ev.target.result);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleSaveAvatar = async (croppedDataUrl) => {
+    setCropModalOpen(false);
+    setLoading(true);
+    try {
+      const res = await fetch(croppedDataUrl);
+      const blob = await res.blob();
+      const fileName = `avatars/${appUser.id}_${Date.now()}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+      await supabase.from('app_users').update({ avatar_url: publicUrl }).eq('id', appUser.id);
+
+      setAvatarUrl(publicUrl);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) await loadUserData(session);
+
+      toast.success('Foto atualizada!');
+    } catch (err) {
+      toast.error('Erro ao salvar foto.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     setLoading(true);
@@ -63,19 +116,34 @@ export default function Profile() {
 
         <div className="flex flex-col items-center">
           <div className="relative mb-4">
-            <div
-              className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-medium shadow-lg"
-              style={{ backgroundColor: selectedColor }}
-            >
-              {name?.[0]?.toUpperCase() || '?'}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={name}
+                className="w-24 h-24 rounded-full object-cover shadow-lg"
+              />
+            ) : (
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-medium shadow-lg"
+                style={{ backgroundColor: selectedColor }}
+              >
+                {name?.[0]?.toUpperCase() || '?'}
+              </div>
+            )}
             <button
               onClick={() => fileRef.current?.click()}
-              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow flex items-center justify-center border border-[var(--border)] hover:bg-[var(--rose-light)] transition-colors"
+              disabled={loading}
+              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow flex items-center justify-center border border-[var(--border)] hover:bg-[var(--rose-light)] transition-colors disabled:opacity-60"
             >
               <Camera size={14} className="text-[var(--rose)]" />
             </button>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
           </div>
           <h1 className="font-serif text-2xl text-[var(--ink)]">{name}</h1>
           <p className="text-xs text-[var(--muted)] mt-1">Membro desde {memberSince}</p>
@@ -154,7 +222,10 @@ export default function Profile() {
 
         {/* Segurança */}
         <div className="bg-white rounded-2xl border border-[var(--border)] overflow-hidden">
-          <div className="p-4 flex items-center justify-between border-b border-[var(--border)]">
+          <button
+            onClick={() => setChangePasswordOpen(true)}
+            className="w-full p-4 flex items-center justify-between border-b border-[var(--border)] hover:bg-[var(--rose-light)] transition-colors"
+          >
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[var(--rose-light)] flex items-center justify-center">
                 <Lock size={16} className="text-[var(--rose)]" />
@@ -162,7 +233,7 @@ export default function Profile() {
               <p className="text-sm font-medium text-[var(--ink)]">Alterar senha</p>
             </div>
             <ChevronRight size={16} className="text-[var(--muted)]" />
-          </div>
+          </button>
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[var(--rose-light)] flex items-center justify-center">
@@ -187,6 +258,18 @@ export default function Profile() {
           <span className="text-sm font-medium text-red-500">Sair da conta</span>
         </button>
       </div>
+
+      <ImageCropModal
+        open={cropModalOpen}
+        imageSrc={rawImage}
+        onSave={handleSaveAvatar}
+        onClose={() => { setCropModalOpen(false); setRawImage(null); }}
+      />
+
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </div>
   );
 }
