@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User, Wallet, Trash2, Download, ChevronRight, Copy, LogOut } from 'lucide-react';
 import TopBar from '../../components/layout/TopBar';
+import Avatar from '../../components/ui/Avatar';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input, { CurrencyInput } from '../../components/ui/Input';
@@ -138,17 +139,16 @@ export default function Settings() {
         {couple && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="text-center">
-              <div className="flex justify-center gap-[-8px] mb-3">
+              <div className="flex justify-center mb-3">
                 {[
-                  { name: couple.partner1Name, color: couple.partner1Color },
-                  { name: couple.partner2Name, color: couple.partner2Color },
-                ].map((p, i) => (
+                  { name: couple.partner1Name, color: couple.partner1Color, avatarUrl: couple.partner1AvatarUrl },
+                  { name: couple.partner2Name, color: couple.partner2Color, avatarUrl: couple.partner2AvatarUrl },
+                ].filter((p) => p.name).map((p, i) => (
                   <div
                     key={i}
-                    className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-semibold ring-4 ring-white"
-                    style={{ backgroundColor: p.color, marginLeft: i > 0 ? '-8px' : '0' }}
+                    style={{ marginLeft: i > 0 ? '-12px' : '0', zIndex: i === 0 ? 2 : 1, position: 'relative' }}
                   >
-                    {p.name?.[0] || '?'}
+                    <Avatar name={p.name} color={p.color} src={p.avatarUrl} size="lg" className="ring-4 ring-white" />
                   </div>
                 ))}
               </div>

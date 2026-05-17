@@ -183,9 +183,9 @@ export default function TransactionForm({ open, onClose, defaultValues }) {
             <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Quem pagou</p>
             <div className="flex gap-3">
               {[
-                { name: couple.partner1Name, color: couple.partner1Color },
-                { name: couple.partner2Name, color: couple.partner2Color },
-              ].map((p) => (
+                { name: couple.partner1Name, color: couple.partner1Color, avatarUrl: couple.partner1AvatarUrl },
+                { name: couple.partner2Name, color: couple.partner2Color, avatarUrl: couple.partner2AvatarUrl },
+              ].filter((p) => p.name && p.name.trim() !== '').map((p) => (
                 <button
                   key={p.name}
                   type="button"
@@ -194,7 +194,7 @@ export default function TransactionForm({ open, onClose, defaultValues }) {
                     paidBy === p.name ? 'border-[var(--rose)] bg-[var(--rose-light)]' : 'border-[var(--border)]'
                   }`}
                 >
-                  <Avatar name={p.name} color={p.color} size="sm" />
+                  <Avatar name={p.name} color={p.color} src={p.avatarUrl} size="sm" />
                   <span className="font-sans text-sm font-medium text-[var(--ink-soft)]">{p.name}</span>
                 </button>
               ))}

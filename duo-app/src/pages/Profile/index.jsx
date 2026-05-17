@@ -47,12 +47,11 @@ export default function Profile() {
   };
 
   const handleSaveAvatar = async (croppedDataUrl) => {
-    setCropModalOpen(false);
     setLoading(true);
     try {
       const res = await fetch(croppedDataUrl);
       const blob = await res.blob();
-      const fileName = `avatars/${appUser.id}_${Date.now()}.jpg`;
+      const fileName = `avatars/${appUser.id}/profile.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -63,20 +62,30 @@ export default function Profile() {
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
       const urlWithTimestamp = `${publicUrl}?t=${Date.now()}`;
 
-      await supabase.from('app_users').update({ avatar_url: publicUrl }).eq('id', appUser.id);
+      await supabase.from('app_users').update({ avatar_url: urlWithTimestamp }).eq('id', appUser.id);
 
-      setAvatarUrl(urlWithTimestamp);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) await loadUserData(session);
-
-      useAuthStore.setState(state => ({
+      // Update appUser in store instantly
+      useAuthStore.setState((state) => ({
         appUser: { ...state.appUser, avatar_url: urlWithTimestamp },
       }));
 
+      // Update couple in store so all avatars refresh immediately
+      useAuthStore.setState((state) => ({
+        couple: {
+          ...state.couple,
+          ...(isPartner1
+            ? { partner1AvatarUrl: urlWithTimestamp }
+            : { partner2AvatarUrl: urlWithTimestamp }),
+        },
+      }));
+
+      setAvatarUrl(urlWithTimestamp);
+      setCropModalOpen(false);
+      setRawImage(null);
       toast.success('Foto atualizada!');
     } catch (err) {
-      toast.error('Erro ao salvar foto.');
+      toast.error('Erro ao salvar foto. Tente novamente.');
+      console.error(err);
     } finally {
       setLoading(false);
     }

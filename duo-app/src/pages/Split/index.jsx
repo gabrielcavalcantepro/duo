@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, CheckCircle, Trash2 } from 'lucide-react';
 import TopBar from '../../components/layout/TopBar';
+import Avatar from '../../components/ui/Avatar';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -216,13 +217,17 @@ export default function Split() {
             <div>
               <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Quem pagou</p>
               <div className="flex gap-2">
-                {[couple.partner1Name, couple.partner2Name].map((name) => (
+                {[
+                  { name: couple.partner1Name, color: couple.partner1Color, avatarUrl: couple.partner1AvatarUrl },
+                  { name: couple.partner2Name, color: couple.partner2Color, avatarUrl: couple.partner2AvatarUrl },
+                ].filter((p) => p.name && p.name.trim() !== '').map((p) => (
                   <button
-                    key={name}
-                    onClick={() => setPaidBy(name)}
-                    className={`flex-1 py-2 rounded-pill text-sm font-sans border-2 transition-all ${paidBy === name ? 'border-[var(--rose)] bg-[var(--rose-light)] text-[var(--rose-dark)]' : 'border-[var(--border)] text-[var(--muted)]'}`}
+                    key={p.name}
+                    onClick={() => setPaidBy(p.name)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-pill text-sm font-sans border-2 transition-all ${paidBy === p.name ? 'border-[var(--rose)] bg-[var(--rose-light)] text-[var(--rose-dark)]' : 'border-[var(--border)] text-[var(--muted)]'}`}
                   >
-                    {name}
+                    <Avatar name={p.name} color={p.color} src={p.avatarUrl} size="xs" />
+                    {p.name}
                   </button>
                 ))}
               </div>

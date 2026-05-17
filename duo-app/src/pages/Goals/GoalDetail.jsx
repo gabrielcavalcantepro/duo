@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm, Controller } from 'react-hook-form';
-import { Trash2, Edit2, Plus, TrendingUp } from 'lucide-react';
+import { Trash2, Edit2, Plus } from 'lucide-react';
+import Avatar from '../../components/ui/Avatar';
+import { getPartnerAvatar } from '../../utils/avatarHelper';
 import confetti from 'canvas-confetti';
 import TopBar from '../../components/layout/TopBar';
 import Card from '../../components/ui/Card';
@@ -181,9 +183,12 @@ export default function GoalDetail() {
             <div className="space-y-3">
               {goalContribs.sort((a, b) => new Date(b.date) - new Date(a.date)).map((c) => (
                 <div key={c.id} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[var(--rose-light)] flex items-center justify-center">
-                    <TrendingUp size={14} className="text-[var(--rose)]" />
-                  </div>
+                  <Avatar
+                    name={c.paidBy}
+                    color={c.paidBy === couple?.partner1Name ? couple?.partner1Color : couple?.partner2Color}
+                    src={getPartnerAvatar(couple, c.paidBy)}
+                    size="sm"
+                  />
                   <div className="flex-1">
                     <p className="font-sans text-sm text-[var(--ink-soft)]">{c.paidBy}</p>
                     {c.note && <p className="font-sans text-xs text-[var(--muted)]">{c.note}</p>}
@@ -217,13 +222,17 @@ export default function GoalDetail() {
             <div>
               <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Quem está contribuindo</p>
               <div className="flex gap-2">
-                {[couple.partner1Name, couple.partner2Name].map((name) => (
+                {[
+                  { name: couple.partner1Name, color: couple.partner1Color, avatarUrl: couple.partner1AvatarUrl },
+                  { name: couple.partner2Name, color: couple.partner2Color, avatarUrl: couple.partner2AvatarUrl },
+                ].filter((p) => p.name && p.name.trim() !== '').map((p) => (
                   <button
-                    key={name}
-                    onClick={() => setContribPaidBy(name)}
-                    className={`flex-1 py-2 rounded-pill text-sm font-sans border-2 transition-all ${contribPaidBy === name ? 'border-[var(--rose)] bg-[var(--rose-light)] text-[var(--rose-dark)]' : 'border-[var(--border)] text-[var(--muted)]'}`}
+                    key={p.name}
+                    onClick={() => setContribPaidBy(p.name)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-pill text-sm font-sans border-2 transition-all ${contribPaidBy === p.name ? 'border-[var(--rose)] bg-[var(--rose-light)] text-[var(--rose-dark)]' : 'border-[var(--border)] text-[var(--muted)]'}`}
                   >
-                    {name}
+                    <Avatar name={p.name} color={p.color} src={p.avatarUrl} size="xs" />
+                    {p.name}
                   </button>
                 ))}
               </div>

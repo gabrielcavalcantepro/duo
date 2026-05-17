@@ -102,7 +102,26 @@ const useAuthStore = create(
             .eq('id', appUser.couple_id)
             .single();
 
-          set({ couple: mapCouple(couple), isOnboarded: !!couple, loading: false });
+          if (couple) {
+            const partnerIds = [couple.partner1_id, couple.partner2_id].filter(Boolean);
+            const { data: partners } = await supabase
+              .from('app_users')
+              .select('id, name, color, avatar_url, is_partner')
+              .in('id', partnerIds);
+
+            const partner1 = partners?.find((p) => p.id === couple.partner1_id);
+            const partner2 = partners?.find((p) => p.id === couple.partner2_id);
+
+            const enrichedCouple = {
+              ...mapCouple(couple),
+              partner1AvatarUrl: partner1?.avatar_url || null,
+              partner2AvatarUrl: partner2?.avatar_url || null,
+            };
+
+            set({ couple: enrichedCouple, isOnboarded: true, loading: false });
+          } else {
+            set({ loading: false });
+          }
         } else {
           set({ loading: false });
         }
@@ -267,6 +286,7 @@ const useAuthStore = create(
       partialize: (state) => ({
         activeUser: state.activeUser,
         appUser: state.appUser,
+        couple: state.couple,
       }),
     }
   )

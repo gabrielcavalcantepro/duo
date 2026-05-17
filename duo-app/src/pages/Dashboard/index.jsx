@@ -96,25 +96,12 @@ export default function Dashboard() {
           <span className="font-sans text-xs text-[var(--muted)] capitalize hidden sm:block">{monthName}</span>
           {couple && (
             <button onClick={() => navigate('/profile')} className="rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--rose)] focus:ring-offset-1">
-              <div
-                className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white text-sm font-medium shadow-sm flex-shrink-0"
-                style={{
-                  backgroundColor: activeUser === couple.partner2Name
-                    ? couple.partner2Color
-                    : couple.partner1Color,
-                }}
-              >
-                {appUser?.avatar_url ? (
-                  <img
-                    src={appUser.avatar_url}
-                    alt={activeUser}
-                    className="w-full h-full object-cover"
-                    key={appUser.avatar_url}
-                  />
-                ) : (
-                  (activeUser || couple.partner1Name)?.[0]?.toUpperCase() || '?'
-                )}
-              </div>
+              <Avatar
+                name={activeUser || couple.partner1Name}
+                color={activeUser === couple.partner2Name ? couple.partner2Color : couple.partner1Color}
+                src={appUser?.avatar_url}
+                size="sm"
+              />
             </button>
           )}
         </div>
