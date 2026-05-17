@@ -186,7 +186,7 @@ export default function Dashboard() {
                 Ver todas <ChevronRight size={16} />
               </Link>
             </div>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 px-0.5">
               {activeGoals.map((goal, i) => {
                 const pct = Math.round((goal.currentAmount / goal.targetAmount) * 100);
                 return (
@@ -197,7 +197,7 @@ export default function Dashboard() {
                     initial="hidden"
                     animate="visible"
                     onClick={() => navigate(`/goals/${goal.id}`)}
-                    className="min-w-[180px] bg-white rounded-card p-4 shadow-card border border-[var(--border)] cursor-pointer hover:shadow-rose transition-shadow"
+                    className="min-w-[180px] bg-white rounded-card p-4 shadow-card border border-[var(--border)] cursor-pointer hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                   >
                     <div className="text-3xl mb-2">{goal.emoji}</div>
                     <p className="font-serif text-base text-[var(--ink)] leading-tight mb-3">{goal.name}</p>

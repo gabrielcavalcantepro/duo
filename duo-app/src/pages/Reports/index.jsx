@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import TopBar from '../../components/layout/TopBar';
+import Avatar from '../../components/ui/Avatar';
 import Card from '../../components/ui/Card';
+import { getPartnerAvatar } from '../../utils/avatarHelper';
 import Badge from '../../components/ui/Badge';
 import DonutChart from '../../components/charts/DonutChart';
 import BarChart from '../../components/charts/BarChart';
@@ -114,7 +116,7 @@ export default function Reports() {
         </motion.div>
 
         {/* Bar chart: income vs expense */}
-        <Card>
+        <Card className="hover:border-[var(--rose-mid)] transition-colors duration-200">
           <h3 className="font-serif text-base text-[var(--ink)] mb-3">Receitas vs Despesas</h3>
           <BarChart
             data={last6}
@@ -127,14 +129,14 @@ export default function Reports() {
         </Card>
 
         {/* Line chart: balance evolution */}
-        <Card>
+        <Card className="hover:border-[var(--rose-mid)] transition-colors duration-200">
           <h3 className="font-serif text-base text-[var(--ink)] mb-3">Evolução do saldo</h3>
           <LineChart data={last6} dataKey="balance" height={160} />
         </Card>
 
         {/* By category */}
         {donutData.length > 0 && (
-          <Card>
+          <Card className="hover:border-[var(--rose-mid)] transition-colors duration-200">
             <h3 className="font-serif text-base text-[var(--ink)] mb-3">Gastos por categoria</h3>
             <DonutChart data={donutData} height={220} />
             <div className="mt-4 space-y-2">
@@ -164,16 +166,16 @@ export default function Reports() {
 
         {/* By person */}
         {couple && (p1Total > 0 || p2Total > 0) && (
-          <Card>
+          <Card className="hover:border-[var(--rose-mid)] transition-colors duration-200">
             <h3 className="font-serif text-base text-[var(--ink)] mb-3">Por pessoa</h3>
             <div className="grid grid-cols-2 gap-4">
               {[
-                { name: couple.partner1Name, color: couple.partner1Color, total: p1Total },
-                { name: couple.partner2Name, color: couple.partner2Color, total: p2Total },
-              ].map((p) => (
+                { name: couple.partner1Name, color: couple.partner1Color, total: p1Total, avatarUrl: couple.partner1AvatarUrl },
+                { name: couple.partner2Name, color: couple.partner2Color, total: p2Total, avatarUrl: couple.partner2AvatarUrl },
+              ].filter((p) => p.name && p.name.trim() !== '').map((p) => (
                 <div key={p.name} className="text-center">
-                  <div className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-semibold" style={{ backgroundColor: p.color }}>
-                    {p.name[0]}
+                  <div className="flex justify-center mb-2">
+                    <Avatar name={p.name} color={p.color} src={p.avatarUrl} size="md" />
                   </div>
                   <p className="font-sans text-sm font-medium text-[var(--ink-soft)]">{p.name}</p>
                   <p className="font-serif text-xl text-[var(--ink)]">{formatBRL(p.total)}</p>
@@ -185,7 +187,7 @@ export default function Reports() {
 
         {/* Goals progress */}
         {goals.length > 0 && (
-          <Card>
+          <Card className="hover:border-[var(--rose-mid)] transition-colors duration-200">
             <h3 className="font-serif text-base text-[var(--ink)] mb-3">Progresso das metas</h3>
             <div className="space-y-4">
               {goals.map((g) => {
