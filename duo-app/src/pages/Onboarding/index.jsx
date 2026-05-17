@@ -104,7 +104,10 @@ export default function Onboarding() {
     }
     const coupleName = coupleData?.name || coupleData?.partner1_name || 'casal';
     toast.success(`Bem-vindos ao Duo, ${coupleName}! 🎉`);
+    console.log('[handleGoal] inviteCode:', inviteCode);
+    console.log('[handleGoal] showInviteModal antes:', showInviteModal);
     setShowInviteModal(true);
+    console.log('[handleGoal] showInviteModal depois:', showInviteModal);
   };
 
   const handleCloseInviteModal = () => {

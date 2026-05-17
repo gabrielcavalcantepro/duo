@@ -167,9 +167,27 @@ const useAuthStore = create(
 
         if (userError) throw userError;
 
-        // Load user data immediately so state is ready before navigate('/onboarding')
+        // Aguarda o app_users ser inserido antes de carregar os dados
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) await get().loadUserData(session);
+        if (session) {
+          // Tenta carregar até 5 vezes com intervalo de 500ms
+          let attempts = 0;
+          while (attempts < 5) {
+            const { data: appUser } = await supabase
+              .from('app_users')
+              .select('*')
+              .eq('auth_id', session.user.id)
+              .single();
+
+            if (appUser) {
+              await get().loadUserData(session);
+              break;
+            }
+
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
 
         return data;
       },

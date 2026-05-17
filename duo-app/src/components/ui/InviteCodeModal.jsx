@@ -3,6 +3,7 @@ import { Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function InviteCodeModal({ code, onClose }) {
+  console.log('[InviteCodeModal] renderizando com code:', code);
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
     toast.success('Código copiado!');
