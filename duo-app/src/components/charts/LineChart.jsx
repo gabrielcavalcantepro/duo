@@ -14,7 +14,7 @@ import { formatBRL, formatBRLCompact } from '../../utils/formatters';
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white rounded-element shadow-rose px-3 py-2 border border-[var(--border)]">
+      <div className="bg-white rounded-element px-3 py-2 border border-[var(--rose-mid)] shadow-sm">
         <p className="font-sans text-xs text-[var(--muted)] mb-1">{label}</p>
         {payload.map((p) => (
           <p key={p.dataKey} className="font-sans text-sm font-medium" style={{ color: p.stroke || p.fill }}>

@@ -7,7 +7,7 @@ const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const { name, value } = payload[0];
     return (
-      <div className="bg-white rounded-element shadow-rose px-3 py-2 border border-[var(--border)]">
+      <div className="bg-white rounded-element px-3 py-2 border border-[var(--rose-mid)] shadow-sm">
         <p className="font-sans text-sm font-medium text-[var(--ink)]">{name}</p>
         <p className="font-sans text-sm text-[var(--rose)]">{formatBRL(value)}</p>
       </div>
