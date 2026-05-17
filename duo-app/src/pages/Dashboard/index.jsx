@@ -95,11 +95,13 @@ export default function Dashboard() {
         <div className="flex items-center gap-2">
           <span className="font-sans text-xs text-[var(--muted)] capitalize hidden sm:block">{monthName}</span>
           {couple && (
-            <Avatar
-              name={activeUser || couple.partner1Name}
-              color={activeUser === couple.partner2Name ? couple.partner2Color : couple.partner1Color}
-              size="sm"
-            />
+            <button onClick={() => navigate('/profile')} className="rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--rose)] focus:ring-offset-1">
+              <Avatar
+                name={activeUser || couple.partner1Name}
+                color={activeUser === couple.partner2Name ? couple.partner2Color : couple.partner1Color}
+                size="sm"
+              />
+            </button>
           )}
         </div>
       </header>
@@ -118,7 +120,7 @@ export default function Dashboard() {
             <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white/5 translate-y-1/2 -translate-x-1/4" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-1">
-                <span className="label-sm text-white/70">Disponível este mês</span>
+                <span className="label-sm text-white/80">Disponível este mês</span>
                 <Badge variant="ink" className="text-white/90 bg-white/20">
                   {monthName.charAt(0).toUpperCase() + monthName.slice(1)} {year}
                 </Badge>
@@ -358,7 +360,8 @@ export default function Dashboard() {
         transition={{ type: 'spring', delay: 0.5 }}
         onClick={() => setShowForm(true)}
         aria-label="Adicionar transação"
-        className="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-[var(--rose)] text-white shadow-rose flex items-center justify-center"
+        className="fixed right-4 z-30 w-14 h-14 rounded-full bg-[var(--rose)] text-white shadow-rose flex items-center justify-center"
+        style={{ bottom: 'calc(64px + 1.5rem + env(safe-area-inset-bottom, 0px))' }}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >

@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import Welcome from './Welcome';
 import CoupleSetup from './CoupleSetup';
 import FirstGoal from './FirstGoal';
+import InviteCodeModal from '../../components/ui/InviteCodeModal';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
@@ -11,6 +12,8 @@ import toast from 'react-hot-toast';
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [coupleData, setCoupleData] = useState(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
   const navigate = useNavigate();
   const { appUser, setCouple, setActiveUser, generateInviteCode } = useAuthStore();
 
@@ -55,7 +58,6 @@ export default function Onboarding() {
       .update({ couple_id: couple.id, color: data.partner1Color || '#D4537E', name: data.partner1Name || appUser.name })
       .eq('id', appUser.id);
 
-    // Enrich with names/colors locally since these columns may not exist in the DB yet
     const enrichedCouple = {
       ...couple,
       partner1_name: data.partner1Name || appUser.name,
@@ -66,6 +68,7 @@ export default function Onboarding() {
     setCouple(enrichedCouple);
     setActiveUser(data.partner1Name || appUser.name);
     setCoupleData(enrichedCouple);
+    setInviteCode(couple.invite_code);
     setStep(2);
   };
 
@@ -83,7 +86,12 @@ export default function Onboarding() {
       });
     }
     const coupleName = coupleData?.name || coupleData?.partner1_name || 'casal';
-    toast.success(`Bem-vindos ao Duo, ${coupleName}!`);
+    toast.success(`Bem-vindos ao Duo, ${coupleName}! 🎉`);
+    setShowInviteModal(true);
+  };
+
+  const handleCloseInviteModal = () => {
+    setShowInviteModal(false);
     navigate('/dashboard');
   };
 
@@ -94,6 +102,13 @@ export default function Onboarding() {
         {step === 1 && <CoupleSetup key="setup" onNext={handleCoupleSetup} />}
         {step === 2 && <FirstGoal key="goal" couple={coupleData} onNext={handleGoal} />}
       </AnimatePresence>
+
+      {showInviteModal && (
+        <InviteCodeModal
+          code={inviteCode}
+          onClose={handleCloseInviteModal}
+        />
+      )}
     </div>
   );
 }

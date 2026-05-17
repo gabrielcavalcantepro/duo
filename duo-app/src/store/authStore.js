@@ -43,6 +43,7 @@ const useAuthStore = create(
       activeUser: null,
       isAuthenticated: false,
       isOnboarded: false,
+      needsProfileSetup: false,
       loading: true,
 
       initialize: async () => {
@@ -199,6 +200,9 @@ const useAuthStore = create(
         // Load user data immediately so state is ready before navigate('/dashboard')
         const { data: { session } } = await supabase.auth.getSession();
         if (session) await get().loadUserData(session);
+
+        // Flag so RootRedirect sends Pessoa 2 to PartnerSetup
+        set({ needsProfileSetup: true });
 
         return data;
       },

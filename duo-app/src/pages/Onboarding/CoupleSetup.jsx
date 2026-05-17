@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -9,10 +8,8 @@ import { PARTNER_COLORS } from '../../utils/categories';
 
 const schema = z.object({
   name: z.string().min(1, 'Informe o nome do casal'),
-  partner1Name: z.string().min(1, 'Informe o nome'),
+  partner1Name: z.string().min(1, 'Informe o seu nome'),
   partner1Color: z.string().min(1),
-  partner2Name: z.string().min(1, 'Informe o nome'),
-  partner2Color: z.string().min(1),
   closingDay: z.number().min(1).max(28),
 });
 
@@ -23,14 +20,11 @@ export default function CoupleSetup({ onNext }) {
       name: '',
       partner1Name: '',
       partner1Color: '#D4537E',
-      partner2Name: '',
-      partner2Color: '#1D9E75',
       closingDay: 5,
     },
   });
 
   const p1Color = watch('partner1Color');
-  const p2Color = watch('partner2Color');
 
   return (
     <motion.div
@@ -47,12 +41,12 @@ export default function CoupleSetup({ onNext }) {
             <div className="h-1 bg-[var(--rose)] rounded-full w-2/3" />
           </div>
         </div>
-        <h1 className="font-serif text-3xl text-[var(--ink)] mb-2">Contem-nos sobre vocês</h1>
-        <p className="font-sans text-sm text-[var(--muted)]">Essas informações personalizam a experiência do Duo</p>
+        <h1 className="font-serif text-3xl text-[var(--ink)] mb-2">Conte-nos sobre você</h1>
+        <p className="font-sans text-sm text-[var(--muted)]">Seu parceiro(a) vai configurar o perfil dele(a) ao entrar com o código do casal</p>
       </div>
 
       <div className="flex-1 px-6 py-8 space-y-6 overflow-y-auto">
-        {/* Couple name */}
+        {/* Nome do casal */}
         <Input
           label="Nome do casal"
           placeholder="Ex: Ana & Rafael"
@@ -60,26 +54,24 @@ export default function CoupleSetup({ onNext }) {
           {...register('name')}
         />
 
-        {/* Partner 1 */}
+        {/* Seus dados */}
         <div className="p-4 rounded-card border border-[var(--border)] bg-white space-y-4">
-          <h3 className="font-serif text-lg text-[var(--ink)]">Pessoa 1</h3>
+          <h3 className="font-serif text-lg text-[var(--ink)]">Seus dados</h3>
           <Input
-            label="Nome"
-            placeholder="Ex: Ana"
+            label="Seu nome"
+            placeholder="Como quer ser chamado(a)?"
             error={errors.partner1Name?.message}
             {...register('partner1Name')}
           />
           <div>
-            <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Cor</p>
-            <div className="flex gap-2.5">
+            <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Sua cor no app</p>
+            <div className="flex gap-2.5 flex-wrap">
               {PARTNER_COLORS.map((c) => (
                 <button
                   key={c.value}
                   type="button"
-                  onClick={() => {
-                    if (c.value !== p2Color) setValue('partner1Color', c.value);
-                  }}
-                  className={`w-9 h-9 rounded-full transition-all ${p1Color === c.value ? 'ring-2 ring-offset-2 scale-110' : 'opacity-70'} ${c.value === p2Color ? 'cursor-not-allowed opacity-30' : ''}`}
+                  onClick={() => setValue('partner1Color', c.value)}
+                  className={`w-9 h-9 rounded-full transition-all ${p1Color === c.value ? 'ring-2 ring-offset-2 scale-110' : 'opacity-70'}`}
                   style={{ backgroundColor: c.value }}
                   aria-label={c.label}
                 />
@@ -88,35 +80,14 @@ export default function CoupleSetup({ onNext }) {
           </div>
         </div>
 
-        {/* Partner 2 */}
-        <div className="p-4 rounded-card border border-[var(--border)] bg-white space-y-4">
-          <h3 className="font-serif text-lg text-[var(--ink)]">Pessoa 2</h3>
-          <Input
-            label="Nome"
-            placeholder="Ex: Rafael"
-            error={errors.partner2Name?.message}
-            {...register('partner2Name')}
-          />
-          <div>
-            <p className="font-sans text-sm font-medium text-[var(--ink-soft)] mb-2">Cor</p>
-            <div className="flex gap-2.5">
-              {PARTNER_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => {
-                    if (c.value !== p1Color) setValue('partner2Color', c.value);
-                  }}
-                  className={`w-9 h-9 rounded-full transition-all ${p2Color === c.value ? 'ring-2 ring-offset-2 scale-110' : 'opacity-70'} ${c.value === p1Color ? 'cursor-not-allowed opacity-30' : ''}`}
-                  style={{ backgroundColor: c.value }}
-                  aria-label={c.label}
-                />
-              ))}
-            </div>
-          </div>
+        {/* Info sobre parceiro */}
+        <div className="p-4 rounded-card border border-dashed border-[var(--rose-mid)] bg-[var(--rose-light)]">
+          <p className="text-sm text-[var(--rose-dark)] leading-relaxed">
+            🤝 Seu parceiro(a) vai configurar o nome e a cor dele(a) quando entrar no app usando o código do casal.
+          </p>
         </div>
 
-        {/* Closing day */}
+        {/* Dia de fechamento */}
         <div>
           <label className="font-sans text-sm font-medium text-[var(--ink-soft)] block mb-1">
             Dia de fechamento do mês financeiro

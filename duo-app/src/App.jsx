@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import AppShell from './components/layout/AppShell';
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
+import PartnerSetup from './pages/Auth/PartnerSetup';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Goals from './pages/Goals';
@@ -15,6 +16,7 @@ import Challenge from './pages/Challenge';
 import Reports from './pages/Reports';
 import Split from './pages/Split';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 
 import useAuthStore from './store/authStore';
 
@@ -43,13 +45,14 @@ function OnboardingRoute({ children }) {
 }
 
 function RootRedirect() {
-  const { isAuthenticated, isOnboarded, loading } = useAuthStore();
+  const { isAuthenticated, isOnboarded, loading, needsProfileSetup } = useAuthStore();
   if (loading) return (
     <div className="min-h-dvh flex items-center justify-center bg-[var(--surface)]">
       <div className="w-10 h-10 rounded-2xl bg-[var(--rose)] animate-pulse" />
     </div>
   );
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
+  if (isAuthenticated && isOnboarded && needsProfileSetup) return <Navigate to="/partner-setup" replace />;
   if (!isOnboarded) return <Navigate to="/onboarding" replace />;
   return <Navigate to="/dashboard" replace />;
 }
@@ -85,9 +88,12 @@ export default function App() {
           <OnboardingRoute><Onboarding /></OnboardingRoute>
         } />
 
+        <Route path="/partner-setup" element={<PartnerSetup />} />
+
         <Route element={
           <ProtectedRoute><AppShell /></ProtectedRoute>
         }>
+          <Route path="/profile"      element={<Profile />} />
           <Route path="/dashboard"    element={<Dashboard />} />
           <Route path="/transactions" element={<Transactions />} />
           <Route path="/goals"        element={<Goals />} />
