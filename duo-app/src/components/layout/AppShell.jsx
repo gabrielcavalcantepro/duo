@@ -1,19 +1,11 @@
-import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { Outlet } from 'react-router-dom';
 import BottomNav from './BottomNav';
-import PageTransition from './PageTransition';
 
 export default function AppShell() {
-  const location = useLocation();
-
   return (
     <div className="flex flex-col min-h-dvh bg-[var(--surface)]">
-      <main role="main" className="flex-1 flex flex-col">
-        <AnimatePresence mode="sync">
-          <PageTransition key={location.pathname}>
-            <Outlet />
-          </PageTransition>
-        </AnimatePresence>
+      <main role="main" className="flex-1 flex flex-col pb-16">
+        <Outlet />
       </main>
       <BottomNav />
     </div>
